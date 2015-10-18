@@ -1,4 +1,4 @@
-/* 
+/*
     File: simpleclient.cpp
 
     Author: R. Bettati
@@ -25,7 +25,7 @@
 #include <sstream>
 #include <sys/types.h>
 #include <sys/stat.h>
-
+#include <time.h>
 #include <errno.h>
 #include <unistd.h>
 
@@ -34,7 +34,7 @@
 using namespace std;
 
 /*--------------------------------------------------------------------------*/
-/* DATA STRUCTURES */ 
+/* DATA STRUCTURES */
 /*--------------------------------------------------------------------------*/
 
     /* -- (none) -- */
@@ -61,38 +61,67 @@ string int2string(int number) {
    return ss.str();//return a string with the contents of the stream
 }
 
+void executeClient() {
+
+    cout << "CLIENT STARTED:" << endl;
+
+    cout << "Establishing control channel... " << flush;
+    RequestChannel chan("control", RequestChannel::CLIENT_SIDE);
+    cout << "done." << endl;
+
+    /* -- Start sending a sequence of requests */
+
+    string reply1 = chan.send_request("hello");
+    cout << "Reply to request 'hello' is '" << reply1 << "'" << endl;
+
+    // string reply2 = chan.send_request("data Joe Smith");
+    // cout << "Reply to request 'data Joe Smith' is '" << reply2 << "'" << endl;
+    //
+    // string reply3 = chan.send_request("data Jane Smith");
+    // cout << "Reply to request 'data Jane Smith' is '" << reply3 << "'" << endl;
+    clock_t clientRunTime = clock();
+    int numberOfDataReqs = 100000;
+    for(int i = 0; i < numberOfDataReqs; i++) {
+      string request_string("data TestPerson" + int2string(i));
+      string reply_string = chan.send_request(request_string);
+    cout << "reply to request " << i << ":" << reply_string << endl;
+    }
+    clientRunTime = clock() - clientRunTime;
+    string reply4 = chan.send_request("quit");
+    cout << "Reply to request 'quit' is '" << reply4 << "'" <<endl;
+
+    printf("Total Requests created by the client: %d\n", numberOfDataReqs);
+    printf("Client RunTime: %f seconds\n", ((float)clientRunTime)/CLOCKS_PER_SEC);
+
+
+    usleep(100000);
+}
+
+void executeServer() {
+    execl("./dataserver", "./dataserver", NULL);
+}
+
+
 /*--------------------------------------------------------------------------*/
 /* MAIN FUNCTION */
 /*--------------------------------------------------------------------------*/
 
 int main(int argc, char * argv[]) {
 
-  cout << "CLIENT STARTED:" << endl;
+    pid_t pid = fork();
 
-  cout << "Establishing control channel... " << flush;
-  RequestChannel chan("control", RequestChannel::CLIENT_SIDE);
-  cout << "done." << endl;
+    if(pid == 0)/*Child Process*/
+    {
+        // executeClient();
+        executeServer();
 
-  /* -- Start sending a sequence of requests */
+    }
+    else /*Parent Process*/
+    {
+        // executeServer();
 
-  string reply1 = chan.send_request("hello");
-  cout << "Reply to request 'hello' is '" << reply1 << "'" << endl;
+        executeClient();
+    }
 
-  string reply2 = chan.send_request("data Joe Smith");
-  cout << "Reply to request 'data Joe Smith' is '" << reply2 << "'" << endl;
-
-  string reply3 = chan.send_request("data Jane Smith");
-  cout << "Reply to request 'data Jane Smith' is '" << reply3 << "'" << endl;
-
-  for(int i = 0; i < 100; i++) {
-    string request_string("data TestPerson" + int2string(i));
-    string reply_string = chan.send_request(request_string);
-	cout << "reply to request " << i << ":" << reply_string << endl;;
-  }
- 
-  string reply4 = chan.send_request("quit");
-  cout << "Reply to request 'quit' is '" << reply4 << endl;
-
-  usleep(1000000);
+    return 0;
 }
-
