@@ -21,7 +21,7 @@ void parseStatus (std::string newline)
    }
 
    substr = "Pid:";
-   if(newline.find(substr) != std::string::npos)
+   if(newline.find(substr) != std::string::npos  && newline.find("TracerPid") == std::string::npos)
    {
      printf("%s\n", newline.c_str());
    }
@@ -48,11 +48,8 @@ void parseStatus (std::string newline)
    substr = "Gid";
    if(newline.find(substr) != std::string::npos)
    {
-     printf("---------GUID---------\n");
-
      printf("\tReal|Effective|Saved Set|File System\n");
      printf("%s\n", newline.c_str());
-     printf("---------GUID---------\n");
    }
 
    substr = "FDSize:";
@@ -88,7 +85,7 @@ void parseAutogroup(std::string newline)
 void parseStat(std::ifstream &statFile)
 {
     std::string str;
-    for (int i = 0; i < 29; i++)
+    for (int i = 0; i < 40; i++)
     {
       statFile >> str;
       switch (i) {
@@ -107,6 +104,9 @@ void parseStat(std::ifstream &statFile)
         case 18:
           printf("Priority Number: %s\n", str.c_str());
           break;
+        case 19:
+          printf("Nice Number: %s\n", str.c_str());
+          break;
         case 24:
           printf("StartCode: %s\n", str.c_str());
           break;
@@ -119,8 +119,24 @@ void parseStat(std::ifstream &statFile)
         case 28:
           printf("Eip: %s\n", str.c_str());
           break;
+        case 39:
+          printf("CPU Last Executed On: %s\n", str.c_str());
+          break;
       }
     }
+}
+
+void parseMap(std::ifstream &mapFile)
+{
+    std::ofstream myfile;
+    myfile.open ("maps.txt");
+    myfile << "address           perms offset  dev   inode\t\t\t\t\tpathname\n";
+    std::string str;
+    while(std::getline(mapFile, str))
+    {
+      myfile << str << std::endl;
+    }
+    myfile.close();
 }
 
 void procManager(std::ifstream fileStream, int functionSelector)
@@ -145,6 +161,8 @@ void procManager(std::ifstream fileStream, int functionSelector)
     }
 
 }
+
+
 
 
 /*Global Options*/
@@ -196,21 +214,22 @@ int main (int argc, char *argv[ ])
             throw "Status File fail during read";
         }
 
-        std::string filePath2 = "/proc/" + strPID + "/autogroup";
-        std::ifstream autoFile(filePath2.c_str(), std::ifstream::in);
-        if (autoFile.good())
-        {
-          std::string str;
-          while(std::getline(autoFile, str))
-          {
-            parseAutogroup(str);
-          }
-        }
-
         std::string filePath3 = "/proc/" + strPID + "/stat";
         std::ifstream statFile(filePath3.c_str(), std::ifstream::in);
         if (statFile.good()) {
             parseStat(statFile);
+        }
+        else{
+            throw "Stat File fail during read";
+        }
+
+        std::string filePath5 = "/proc/" + strPID + "/maps";
+        std::ifstream mapFile(filePath5.c_str(), std::ifstream::in);
+        if (statFile.good()) {
+            parseMap(mapFile);
+        }
+        else{
+            throw "Maps File fail during read";
         }
     }
     catch(char const* error)
