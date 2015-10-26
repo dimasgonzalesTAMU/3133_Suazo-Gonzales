@@ -3,6 +3,8 @@
 #include <string.h>
 #include <iostream>
 #include <fstream>
+#include <unistd.h>
+#include <string>
 
 void parseStatus (std::string newline)
 {
@@ -83,18 +85,52 @@ void parseAutogroup(std::string newline)
   printf("\t%s\n", newline.c_str());
 }
 
-
-
-int main ()
+void parseStat(std::ifstream &statFile)
 {
-    char filePath[50] = "/proc/2964/status";
-    std::ifstream statusFile(filePath, std::ifstream::in);
+    std::string str;
+    for (int i = 0; i < 29; i++)
+    {
+      statFile >> str;
+      switch (i) {
+        case 13:
+          printf("Utime: %s\n", str.c_str());
+          break;
+        case 14:
+          printf("Stime: %s\n", str.c_str());
+          break;
+        case 15:
+          printf("Cutime: %s\n", str.c_str());
+          break;
+        case 16:
+          printf("Cstime: %s\n", str.c_str());
+          break;
+        case 18:
+          printf("Priority Number: %s\n", str.c_str());
+          break;
+        case 24:
+          printf("StartCode: %s\n", str.c_str());
+          break;
+        case 25:
+          printf("EndCode: %s\n", str.c_str());
+          break;
+        case 27:
+          printf("Esp: %s\n", str.c_str());
+          break;
+        case 28:
+          printf("Eip: %s\n", str.c_str());
+          break;
+      }
+    }
+}
+
+void procManager(std::ifstream fileStream, int functionSelector)
+{
     try
     {
-        if (statusFile.good())
+        if (fileStream.good())
         {
           std::string str;
-          while(std::getline(statusFile, str)){
+          while(std::getline(fileStream, str)){
             parseStatus(str);
           }
         }
@@ -108,81 +144,83 @@ int main ()
         printf("You had an error during read\n" );
     }
 
-    char filePath2[50] = "/proc/2964/autogroup";
-    std::ifstream autoFile(filePath2, std::ifstream::in);
+}
+
+
+/*Global Options*/
+std::string strPID = "";
+void getOption(int argc, char *argv[ ])
+{
+    char option;
+
+    //Specifying the expected options
+    while ((option = getopt(argc, argv, "p:")) != -1)
+    {
+        switch (option) {
+              case 'p' :
+                  strPID = optarg;
+                  break;
+              case '?':
+                  if (optarg == "p")
+                    fprintf (stderr, "Option -%c requires an argument.\n", optarg);
+                  else
+                    fprintf (stderr, "Unknown option character `\\x%x'.\n",  optarg);
+              default:
+                  abort ();
+          }
+    }
+}
+
+int main (int argc, char *argv[ ])
+{
+    getOption(argc, argv);
+
     try
     {
+        if(strPID == "")
+        {
+            throw "Please enter a valid PID";
+        }
+
+        std::string filePath = "/proc/" + strPID + "/status";
+        std::ifstream statusFile(filePath.c_str(), std::ifstream::in);
+        if (statusFile.good())
+        {
+          std::string str;
+          while(std::getline(statusFile, str))
+          {
+            parseStatus(str);
+          }
+        }
+        else{
+            throw "Status File fail during read";
+        }
+
+        std::string filePath2 = "/proc/" + strPID + "/autogroup";
+        std::ifstream autoFile(filePath2.c_str(), std::ifstream::in);
         if (autoFile.good())
         {
           std::string str;
-          while(std::getline(autoFile, str)){
+          while(std::getline(autoFile, str))
+          {
             parseAutogroup(str);
           }
         }
-        else
-        {
-            printf("Crap file is no good\n");
+
+        std::string filePath3 = "/proc/" + strPID + "/stat";
+        std::ifstream statFile(filePath3.c_str(), std::ifstream::in);
+        if (statFile.good()) {
+            parseStat(statFile);
         }
+    }
+    catch(char const* error)
+    {
+        printf("%s\n", error);
     }
     catch(...)
     {
-        printf("You had an error during read\n" );
+        printf("You had an unknown error\n" );
     }
-
-    char filePath3[50] = "/proc/2964/stat";
-    std::ifstream statFile(filePath3, std::ifstream::in);
-    try
-    {
-        if (statFile.good())
-        {
-          std::string str;
-          for (int i = 0; i < 29; i++)
-          {
-            statFile >> str;
-            switch (i) {
-              case 13:
-                printf("Utime: %s\n", str.c_str());
-                break;
-              case 14:
-              printf("Stime: %s\n", str.c_str());
-              break;
-
-              case 15:
-              printf("Cutime: %s\n", str.c_str());
-              break;
-
-              case 16:
-              printf("Cstime: %s\n", str.c_str());
-              break;
-              case 18:
-              printf("Priority Number: %s\n", str.c_str());
-              break;
-              case 24:
-              printf("StartCode: %s\n", str.c_str());
-              break;
-              case 25:
-              printf("EndCode: %s\n", str.c_str());
-              break;
-              case 27:
-              printf("Esp: %s\n", str.c_str());
-              break;
-              case 28:
-              printf("Eip: %s\n", str.c_str());
-              break;
-            }
-          }
-        }
-        else
-        {
-            printf("Crap file is no good\n");
-        }
-    }
-    catch(...)
-    {
-        printf("You had an error during read\n" );
-    }
-
-
 
     return 0;
 
