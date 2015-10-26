@@ -61,6 +61,11 @@ string int2string(int number) {
    return ss.str();//return a string with the contents of the stream
 }
 
+string localRequestHandler(string request)
+{
+    return request;
+}
+
 void executeClient() {
 
     cout << "CLIENT STARTED:" << endl;
@@ -80,10 +85,16 @@ void executeClient() {
     // string reply3 = chan.send_request("data Jane Smith");
     // cout << "Reply to request 'data Jane Smith' is '" << reply3 << "'" << endl;
     clock_t clientRunTime = clock();
-    int numberOfDataReqs = 100000;
-    for(int i = 0; i < numberOfDataReqs; i++) {
+    int numberOfDataReqs = 10000;
+    for(int i = 0; i < numberOfDataReqs; i++)
+    {
       string request_string("data TestPerson" + int2string(i));
+      clock_t requestRunTime = clock();
       string reply_string = chan.send_request(request_string);
+    //   string reply_string = localRequestHandler(request_string);
+      requestRunTime = clock() - requestRunTime;
+      printf("Request %i RunTime: %f seconds\n", i, ((float)clientRunTime)/CLOCKS_PER_SEC);
+
     cout << "reply to request " << i << ":" << reply_string << endl;
     }
     clientRunTime = clock() - clientRunTime;
@@ -97,7 +108,8 @@ void executeClient() {
     usleep(100000);
 }
 
-void executeServer() {
+void executeServer()
+{
     execl("./dataserver", "./dataserver", NULL);
 }
 
